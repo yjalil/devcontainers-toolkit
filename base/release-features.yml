@@ -1,0 +1,31 @@
+name: Release Features
+
+# Publishes every feature under features/src/ to GHCR as OCI artifacts.
+# Manual trigger, or auto on changes to feature sources on main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "features/src/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish Features to GHCR
+        uses: devcontainers/action@v1
+        with:
+          publish-features: "true"
+          base-path-to-features: "features/src"
+          # Published as: ghcr.io/<owner>/<feature-id>:<version>
+          oci-registry: ghcr.io
+          features-namespace: ${{ github.repository_owner }}/devcontainers-toolkit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
