@@ -1,0 +1,46 @@
+name: Build Base Image
+
+# Builds base/Dockerfile and pushes to GHCR.
+# Auto on changes to base/ on main; also manual.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "base/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/devbase
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: base
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          # GitHub Actions cache so rebuilds of the base are fast and
+          # don't bloat anything locally
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
