@@ -1,0 +1,18 @@
+{
+  "id": "vnc-desktop",
+  "version": "1.0.0",
+  "name": "VNC desktop + Electron libs",
+  "description": "Lightweight desktop for GUI/Electron apps: Electron shared libraries, TigerVNC, fluxbox window manager, and noVNC web client. Opt-in for projects that run desktop/Electron software.",
+  "options": {
+    "vncPort": {
+      "type": "string",
+      "default": "5901",
+      "description": "VNC server port"
+    },
+    "novncPort": {
+      "type": "string",
+      "default": "6080",
+      "description": "noVNC web client port"
+    }
+  }
+}

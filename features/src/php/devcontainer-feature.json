@@ -1,0 +1,14 @@
+{
+  "id": "php",
+  "version": "1.0.0",
+  "name": "PHP (Sury) + Composer",
+  "description": "PHP from the Sury repository plus Composer and the common PHP build/runtime libraries. Opt-in per project.",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["8.4", "8.3", "8.2"],
+      "default": "8.4",
+      "description": "PHP version to install from Sury"
+    }
+  }
+}

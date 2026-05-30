@@ -1,0 +1,18 @@
+{
+  "id": "dev-tools",
+  "version": "1.0.0",
+  "name": "Investigative dev tools",
+  "description": "Network/debug/db investigative tooling: jq, httpie, psql, redis-tools, ripgrep, htop, strace, and network utilities. Opt-in so the base image stays lean.",
+  "options": {
+    "includeDbClients": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install postgresql-client and redis-tools"
+    },
+    "includeNetTools": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install ping, dnsutils, netcat, traceroute, etc."
+    }
+  }
+}
