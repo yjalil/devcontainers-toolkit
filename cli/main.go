@@ -32,37 +32,77 @@ const (
 //   miseTool:    the key written into [tools] in .mise.toml
 //   miseVersion: pinned LTS/stable default (NEVER "latest")
 //   feature:     "" if no root system libs are needed, else the Feature id (e.g. "ruby")
+//   persistDirs: home-relative dirs this language's runtime writes to that must be
+//                persisted in the volume (e.g. rustup/cargo for rust). Without this,
+//                the toolchain re-downloads on every rebuild. Names are relative to $HOME.
 type lang struct {
 	miseTool    string
 	miseVersion string
 	feature     string
+	persistDirs []string
 }
 
 // languages maps a CLI argument -> provisioning.
 // Versions are deliberate pins; bump them here when you choose to move.
 var languages = map[string]lang{
 	"python":     {miseTool: "python", miseVersion: "3.12", feature: ""},
-	"node":       {miseTool: "node", miseVersion: "lts", feature: ""},
-	"typescript": {miseTool: "node", miseVersion: "lts", feature: ""}, // alias: TS rides on node
-	"go":         {miseTool: "go", miseVersion: "1.23", feature: ""},
-	"rust":       {miseTool: "rust", miseVersion: "stable", feature: ""},
+	"node":       {miseTool: "node", miseVersion: "lts", feature: "", persistDirs: []string{".npm"}},
+	"typescript": {miseTool: "node", miseVersion: "lts", feature: "", persistDirs: []string{".npm"}}, // alias: TS rides on node
+	"go":         {miseTool: "go", miseVersion: "1.23", feature: "", persistDirs: []string{"go"}},
+	"rust":       {miseTool: "rust", miseVersion: "stable", feature: "", persistDirs: []string{".rustup", ".cargo"}},
 	"zig":        {miseTool: "zig", miseVersion: "0.13.0", feature: ""},
 	"ruby":       {miseTool: "ruby", miseVersion: "3.3", feature: "ruby"},
-	"haskell":    {miseTool: "ghc", miseVersion: "9.8", feature: "haskell"},
+	"haskell":    {miseTool: "ghc", miseVersion: "9.8", feature: "haskell", persistDirs: []string{".ghcup", ".cabal", ".stack"}},
 	"lua":        {miseTool: "lua", miseVersion: "5.4", feature: "lua"},
 }
 
 // ─── Templates ───────────────────────────────────────────────────────────────
 
-// The onCreateCommand redirects tool/state dirs into the persistent volume so
-// mise languages, caches, and tool data survive rebuilds instead of reinstalling.
-const onCreateCommand = "sudo chown -R vscode:vscode ~/persistent-data && " +
-	"mkdir -p ~/persistent-data/mise ~/persistent-data/cache ~/persistent-data/uv ~/persistent-data/zsh && " +
-	"rm -rf ~/.local/share/mise ~/.cache ~/.local/share/uv && " +
-	"mkdir -p ~/.local/share && " +
-	"ln -sfn ~/persistent-data/mise ~/.local/share/mise && " +
-	"ln -sfn ~/persistent-data/cache ~/.cache && " +
-	"ln -sfn ~/persistent-data/uv ~/.local/share/uv"
+// basePersist are the dirs every container persists: mise toolchains, generic
+// cache, uv, and zsh history. Language-specific dirs (rustup, go, etc.) are
+// appended based on the chosen languages.
+//   mapping: HOME-relative dir  ->  volume subdir name
+var basePersist = [][2]string{
+	{".local/share/mise", "mise"},
+	{".cache", "cache"},
+	{".local/share/uv", "uv"},
+}
+
+// buildOnCreate constructs the onCreateCommand: it redirects tool/state dirs
+// into the persistent volume (via symlink) so toolchains and caches survive
+// rebuilds instead of re-downloading. extraDirs are HOME-relative dirs from the
+// chosen languages (e.g. ".rustup", "go").
+func buildOnCreate(extraDirs []string) string {
+	// Build the full mapping: base + language dirs. Volume subdir = last path
+	// element with dots stripped (".rustup" -> "rustup", "go" -> "go").
+	type pair struct{ home, vol string }
+	pairs := []pair{}
+	for _, b := range basePersist {
+		pairs = append(pairs, pair{b[0], b[1]})
+	}
+	for _, d := range extraDirs {
+		vol := strings.TrimPrefix(filepath.Base(d), ".")
+		pairs = append(pairs, pair{d, vol})
+	}
+
+	// zsh history dir is always created (history lives there), no symlink needed.
+	volDirs := []string{"~/persistent-data/zsh"}
+	var rmTargets, links []string
+	for _, p := range pairs {
+		volDirs = append(volDirs, "~/persistent-data/"+p.vol)
+		rmTargets = append(rmTargets, "~/"+p.home)
+		links = append(links, fmt.Sprintf("ln -sfn ~/persistent-data/%s ~/%s", p.vol, p.home))
+	}
+
+	parts := []string{
+		"sudo chown -R vscode:vscode ~/persistent-data",
+		"mkdir -p " + strings.Join(volDirs, " "),
+		"rm -rf " + strings.Join(rmTargets, " "),
+		"mkdir -p ~/.local/share", // parent for mise/uv symlinks
+	}
+	parts = append(parts, links...)
+	return strings.Join(parts, " && ")
+}
 
 func main() {
 	args := os.Args[1:]
@@ -108,6 +148,7 @@ func main() {
 	// Resolve & validate languages.
 	chosen := map[string]lang{} // keyed by miseTool to dedupe (node+typescript)
 	featureSet := map[string]bool{}
+	persistSet := map[string]bool{} // HOME-relative dirs to persist, deduped
 	for _, name := range langArgs {
 		l, ok := languages[name]
 		if !ok {
@@ -116,6 +157,9 @@ func main() {
 		chosen[l.miseTool] = l
 		if l.feature != "" {
 			featureSet[l.feature] = true
+		}
+		for _, d := range l.persistDirs {
+			persistSet[d] = true
 		}
 	}
 
@@ -128,7 +172,8 @@ func main() {
 		name = filepath.Base(cwd)
 	}
 
-	devcontainerJSON := renderDevcontainer(name, featureSet, !noTools)
+	onCreate := buildOnCreate(sortedSet(persistSet))
+	devcontainerJSON := renderDevcontainer(name, featureSet, !noTools, onCreate)
 	miseTOML := renderMise(chosen)
 
 	// Write files.
@@ -148,7 +193,7 @@ func main() {
 }
 
 // renderDevcontainer builds the devcontainer.json text.
-func renderDevcontainer(name string, featureSet map[string]bool, withTools bool) string {
+func renderDevcontainer(name string, featureSet map[string]bool, withTools bool, onCreate string) string {
 	// Collect feature reference lines.
 	var featureLines []string
 	if withTools {
@@ -180,7 +225,7 @@ func renderDevcontainer(name string, featureSet map[string]bool, withTools bool)
 
   "remoteUser": "vscode"
 }
-`, name, baseImage, features, onCreateCommand)
+`, name, baseImage, features, onCreate)
 }
 
 // renderMise builds the .mise.toml text with pinned versions.
