@@ -1,0 +1,5 @@
+# Pinned versions — never "latest". Bump deliberately as needed.
+[tools]
+lua = "5.4"
+python = "3.12"
+rust = "stable"

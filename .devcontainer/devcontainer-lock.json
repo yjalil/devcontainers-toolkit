@@ -1,0 +1,9 @@
+{
+  "features": {
+    "ghcr.io/yjalil/devcontainers-toolkit/dev-tools:1": {
+      "version": "1.0.0",
+      "resolved": "ghcr.io/yjalil/devcontainers-toolkit/dev-tools@sha256:0ad869478bdf41223e4dd77e2509bd49d9a59734c49932b94d3fef62a017cba4",
+      "integrity": "sha256:0ad869478bdf41223e4dd77e2509bd49d9a59734c49932b94d3fef62a017cba4"
+    }
+  }
+}

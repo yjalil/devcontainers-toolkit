@@ -1,0 +1,19 @@
+{
+  "name": "cli",
+  "image": "ghcr.io/yjalil/devbase:latest",
+  "features": {
+    "ghcr.io/yjalil/devcontainers-toolkit/dev-tools:1": {},
+    "ghcr.io/yjalil/devcontainers-toolkit/lua:1": {}
+  },
+
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-data,target=/home/vscode/persistent-data,type=volume"
+  ],
+
+  "onCreateCommand": "sudo chown -R vscode:vscode ~/persistent-data && mkdir -p ~/persistent-data/mise ~/persistent-data/cache ~/persistent-data/uv ~/persistent-data/zsh && rm -rf ~/.local/share/mise ~/.cache ~/.local/share/uv && mkdir -p ~/.local/share && ln -sfn ~/persistent-data/mise ~/.local/share/mise && ln -sfn ~/persistent-data/cache ~/.cache && ln -sfn ~/persistent-data/uv ~/.local/share/uv",
+  "postCreateCommand": "mise install -y && echo ready",
+
+  "remoteUser": "vscode"
+}

@@ -6,7 +6,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 # Always-on investigative core
-PACKAGES="jq httpie htop lsof strace ripgrep"
+PACKAGES="jq httpie htop lsof strace ripgrep fzf"
 
 if [ "${INCLUDENETTOOLS:-true}" = "true" ]; then
   PACKAGES="$PACKAGES iputils-ping dnsutils netcat-openbsd net-tools iproute2 traceroute telnet"
