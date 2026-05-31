@@ -1,0 +1,3 @@
+# Go is the toolkit's own build dependency — lives here, not on the host.
+[tools]
+go = "1.23"
