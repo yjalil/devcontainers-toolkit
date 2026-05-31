@@ -1,0 +1,7 @@
+{
+  "id": "haskell",
+  "version": "1.0.0",
+  "name": "Haskell build dependencies",
+  "description": "System libraries required for GHC/cabal/stack via mise on Debian. Does NOT install GHC itself — declare it in .mise.toml; this Feature provides the root-level libs GHC links against (gmp, ffi, ncurses/tinfo, zlib).",
+  "options": {}
+}

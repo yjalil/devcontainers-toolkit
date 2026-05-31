@@ -1,0 +1,7 @@
+{
+  "id": "ruby",
+  "version": "1.0.0",
+  "name": "Ruby build dependencies",
+  "description": "System libraries required to compile Ruby from source via mise/ruby-build on Debian. Does NOT install Ruby itself — declare the version in .mise.toml; this Feature only provides the root-level headers ruby-build needs.",
+  "options": {}
+}

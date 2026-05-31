@@ -1,0 +1,7 @@
+{
+  "id": "lua",
+  "version": "1.0.0",
+  "name": "Lua build dependencies",
+  "description": "System libraries for building Lua and LuaRocks modules via mise on Debian. Lua itself comes from .mise.toml; this provides readline (interactive lua) and the headers C modules commonly need.",
+  "options": {}
+}
